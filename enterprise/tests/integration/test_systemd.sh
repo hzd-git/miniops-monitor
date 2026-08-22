@@ -16,9 +16,54 @@ diagnose() {
   journalctl -u "$SERVICE_NAME" -n 50 --no-pager || true
 }
 
+check_clean_state() {
+  local active_state enabled_state dirty=0
+
+  active_state="$(systemctl is-active "$SERVICE_NAME" 2>/dev/null || true)"
+  case "$active_state" in
+    inactive | failed | unknown) ;;
+    *)
+      echo "FAIL: service active state after cleanup: ${active_state:-<empty>}" >&2
+      dirty=1
+      ;;
+  esac
+
+  enabled_state="$(systemctl is-enabled "$SERVICE_NAME" 2>/dev/null || true)"
+  case "$enabled_state" in
+    disabled | static | indirect | masked | masked-runtime | generated | transient | bad | bad-setting | not-found | unknown) ;;
+    *)
+      echo "FAIL: service enabled state after cleanup: ${enabled_state:-<empty>}" >&2
+      dirty=1
+      ;;
+  esac
+
+  for path in "$SERVICE_FILE" "$INSTALL_FILE" "$CONFIG_FILE"; do
+    if [[ -e "$path" ]]; then
+      echo "FAIL: cleanup left file behind: $path" >&2
+      dirty=1
+    fi
+  done
+
+  return "$dirty"
+}
+
 cleanup() {
-  if ((ATTEMPTED == 1)) && { [[ -e "$SERVICE_FILE" ]] || [[ -e "$INSTALL_FILE" ]] || [[ -e "$CONFIG_FILE" ]]; }; then
-    bash "$UNINSTALL_SCRIPT" --purge-config >/dev/null 2>&1 || true
+  local cleanup_status=0
+
+  if ((ATTEMPTED == 1)); then
+    if ! bash "$UNINSTALL_SCRIPT" --purge-config >/dev/null 2>&1; then
+      echo "FAIL: cleanup uninstaller failed." >&2
+      cleanup_status=1
+      diagnose
+    fi
+    if ! check_clean_state; then
+      cleanup_status=1
+      diagnose
+    fi
+  fi
+  if ((cleanup_status != 0)); then
+    echo "FAIL: systemd cleanup did not complete successfully." >&2
+    exit 1
   fi
 }
 trap cleanup EXIT
@@ -83,9 +128,10 @@ if ! bash "$UNINSTALL_SCRIPT" --purge-config; then
   exit 1
 fi
 
-ATTEMPTED=0
-[[ ! -e "$SERVICE_FILE" && ! -e "$INSTALL_FILE" && ! -e "$CONFIG_FILE" ]] || {
-  echo "FAIL: uninstall left files behind." >&2
+if ! check_clean_state; then
+  echo "FAIL: uninstall left service state or files behind." >&2
+  diagnose
   exit 1
-}
+fi
+ATTEMPTED=0
 echo "PASS: systemd install, journal, and uninstall checks completed."
