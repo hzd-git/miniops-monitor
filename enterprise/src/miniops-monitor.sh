@@ -121,8 +121,8 @@ load_config_file() {
     fi
 
     case "$key" in
-      INTERVAL_SECONDS|CPU_LOAD_WARN|MEMORY_WARN|DISK_WARN)
-        ;;
+      INTERVAL_SECONDS | CPU_LOAD_WARN | MEMORY_WARN | DISK_WARN) ;;
+
       *)
         config_error "unknown_key_${key}"
         return 1
@@ -135,7 +135,7 @@ load_config_file() {
     fi
     CONFIG_KEYS["$key"]=1
     printf -v "$key" '%s' "$value"
-  done < "$path"
+  done <"$path"
 }
 
 validate_config() {
@@ -169,7 +169,7 @@ parse_args() {
 
   while (($# > 0)); do
     case "$1" in
-      --once|--loop|--self-test)
+      --once | --loop | --self-test)
         mode_count=$((mode_count + 1))
         if ((mode_count > 1)); then
           printf 'CLI_ERROR: 只能指定一个运行模式。\n' >&2
@@ -218,7 +218,7 @@ parse_args() {
         CLI_DISK_WARN="$2"
         shift 2
         ;;
-      --help|-h)
+      --help | -h)
         HELP_REQUESTED=1
         shift
         ;;
@@ -256,7 +256,7 @@ disk_used_percent_from_value() {
 cpu_load_ratio() {
   local load cores
   [[ -r "$PROC_ROOT/loadavg" ]] || return 1
-  if ! read -r load _ < "$PROC_ROOT/loadavg"; then
+  if ! read -r load _ <"$PROC_ROOT/loadavg"; then
     return 1
   fi
   if ! cores=$(command nproc 2>/dev/null); then
@@ -270,7 +270,7 @@ memory_used_percent() {
   if ! values=$(free | awk '$1 == "Mem:" { print $2, $7; found=1 } END { if (!found) exit 1 }'); then
     return 1
   fi
-  read -r total available <<< "$values" || return 1
+  read -r total available <<<"$values" || return 1
   memory_used_percent_from_values "$total" "$available"
 }
 

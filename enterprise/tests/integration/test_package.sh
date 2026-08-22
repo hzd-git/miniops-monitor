@@ -5,7 +5,7 @@ set -uo pipefail
 TEST_DIR="$(CDPATH="" cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(CDPATH="" cd -- "$TEST_DIR/../.." && pwd)"
 PACKAGE_SCRIPT="$PROJECT_DIR/scripts/package.sh"
-VERSION="$(tr -d '[:space:]' < "$PROJECT_DIR/VERSION")"
+VERSION="$(tr -d '[:space:]' <"$PROJECT_DIR/VERSION")"
 DIST_DIR="$PROJECT_DIR/build/dist"
 PACKAGE_FILE="$DIST_DIR/miniops-monitor-enterprise-$VERSION.tar.gz"
 CHECKSUM_FILE="$PACKAGE_FILE.sha256"

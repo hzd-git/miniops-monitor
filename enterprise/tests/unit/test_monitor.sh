@@ -63,8 +63,8 @@ test_config_parser() {
   temp_dir="$(mktemp -d)"
   valid_file="$temp_dir/valid.env"
   invalid_file="$temp_dir/invalid.env"
-  printf '%s\n' 'INTERVAL_SECONDS=30' 'CPU_LOAD_WARN=75' 'MEMORY_WARN=80' 'DISK_WARN=70' > "$valid_file"
-  printf '%s\n' 'INTERVAL_SECONDS=1' > "$invalid_file"
+  printf '%s\n' 'INTERVAL_SECONDS=30' 'CPU_LOAD_WARN=75' 'MEMORY_WARN=80' 'DISK_WARN=70' >"$valid_file"
+  printf '%s\n' 'INTERVAL_SECONDS=1' >"$invalid_file"
 
   set_defaults
   if load_config_file "$valid_file" && validate_config; then

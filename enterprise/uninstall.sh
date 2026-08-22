@@ -54,7 +54,7 @@ systemctl_state() {
   fi
 
   case "$output" in
-    active|activating|deactivating|reloading|inactive|failed)
+    active | activating | deactivating | reloading | inactive | failed)
       printf '%s\n' "$output"
       return 0
       ;;
@@ -78,7 +78,7 @@ systemctl_enabled_state() {
   fi
 
   case "$output" in
-    enabled|enabled-runtime|linked|linked-runtime|alias|masked|masked-runtime|static|indirect|disabled|generated|transient|bad-setting|not-found|unknown)
+    enabled | enabled-runtime | linked | linked-runtime | alias | masked | masked-runtime | static | indirect | disabled | generated | transient | bad-setting | not-found | unknown)
       printf '%s\n' "$output"
       return 0
       ;;
@@ -91,7 +91,7 @@ systemctl_enabled_state() {
 
 is_running_state() {
   case "$1" in
-    active|activating|deactivating|reloading)
+    active | activating | deactivating | reloading)
       return 0
       ;;
     *)
@@ -102,7 +102,7 @@ is_running_state() {
 
 is_stopped_state() {
   case "$1" in
-    inactive|failed|not-found)
+    inactive | failed | not-found)
       return 0
       ;;
     *)
@@ -151,7 +151,7 @@ disable_and_verify() {
     return 1
   fi
   case "$state" in
-    enabled|enabled-runtime|linked|linked-runtime|alias)
+    enabled | enabled-runtime | linked | linked-runtime | alias)
       if ! systemctl_cmd disable "$SERVICE_NAME"; then
         echo "禁用服务失败，保留安装文件。" >&2
         report_systemd_failure
@@ -162,15 +162,15 @@ disable_and_verify() {
         return 1
       fi
       case "$state" in
-        enabled|enabled-runtime|linked|linked-runtime|alias)
+        enabled | enabled-runtime | linked | linked-runtime | alias)
           echo "disable 已返回，但服务仍处于启用状态。" >&2
           report_systemd_failure
           return 1
           ;;
       esac
       ;;
-    disabled|static|indirect|masked|masked-runtime|generated|transient|bad-setting|not-found|unknown)
-      ;;
+    disabled | static | indirect | masked | masked-runtime | generated | transient | bad-setting | not-found | unknown) ;;
+
     *)
       echo "无法确认服务启用状态: $state" >&2
       report_systemd_failure
@@ -190,7 +190,7 @@ parse_args() {
         PURGE_CONFIG=1
         shift
         ;;
-      --help|-h)
+      --help | -h)
         usage
         exit 0
         ;;

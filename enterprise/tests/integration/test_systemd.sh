@@ -27,9 +27,18 @@ if [[ "${MINIOPS_ALLOW_SYSTEMD_TEST:-0}" != "1" ]]; then
   echo "SKIP: set MINIOPS_ALLOW_SYSTEMD_TEST=1 in a disposable Linux host to run this test." >&2
   exit 2
 fi
-[[ "$(uname -s)" == "Linux" ]] || { echo "FAIL: Linux is required." >&2; exit 1; }
-((EUID == 0)) || { echo "FAIL: root is required." >&2; exit 1; }
-[[ "$(</proc/1/comm)" == "systemd" ]] || { echo "FAIL: systemd must be PID 1." >&2; exit 1; }
+[[ "$(uname -s)" == "Linux" ]] || {
+  echo "FAIL: Linux is required." >&2
+  exit 1
+}
+((EUID == 0)) || {
+  echo "FAIL: root is required." >&2
+  exit 1
+}
+[[ "$(</proc/1/comm)" == "systemd" ]] || {
+  echo "FAIL: systemd must be PID 1." >&2
+  exit 1
+}
 
 if systemctl is-active --quiet "$SERVICE_NAME" || systemctl is-enabled --quiet "$SERVICE_NAME" || [[ -e "$SERVICE_FILE" || -e "$INSTALL_FILE" || -e "$CONFIG_FILE" ]]; then
   echo "FAIL: refusing to overwrite an existing enterprise installation." >&2
@@ -43,8 +52,16 @@ if ! bash "$INSTALL_SCRIPT"; then
   exit 1
 fi
 
-systemctl is-enabled --quiet "$SERVICE_NAME" || { echo "FAIL: service is not enabled." >&2; diagnose; exit 1; }
-systemctl is-active --quiet "$SERVICE_NAME" || { echo "FAIL: service is not active." >&2; diagnose; exit 1; }
+systemctl is-enabled --quiet "$SERVICE_NAME" || {
+  echo "FAIL: service is not enabled." >&2
+  diagnose
+  exit 1
+}
+systemctl is-active --quiet "$SERVICE_NAME" || {
+  echo "FAIL: service is not active." >&2
+  diagnose
+  exit 1
+}
 
 found_log=0
 for _ in {1..10}; do
@@ -67,5 +84,8 @@ if ! bash "$UNINSTALL_SCRIPT" --purge-config; then
 fi
 
 ATTEMPTED=0
-[[ ! -e "$SERVICE_FILE" && ! -e "$INSTALL_FILE" && ! -e "$CONFIG_FILE" ]] || { echo "FAIL: uninstall left files behind." >&2; exit 1; }
+[[ ! -e "$SERVICE_FILE" && ! -e "$INSTALL_FILE" && ! -e "$CONFIG_FILE" ]] || {
+  echo "FAIL: uninstall left files behind." >&2
+  exit 1
+}
 echo "PASS: systemd install, journal, and uninstall checks completed."

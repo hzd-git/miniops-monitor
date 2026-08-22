@@ -50,21 +50,22 @@ assert_not_exists() {
 }
 
 create_monitor_fixtures() {
-  local root="$1" bin="$root/bin" proc="$root/proc"
+  local root="$1"
+  local bin="$root/bin" proc="$root/proc"
   mkdir -p "$bin" "$proc"
-  printf '%s\n' '0.50 0.25 0.10 1/10 1234' > "$proc/loadavg"
-  printf '%s\n' 'Mem: 100 75 0 0 0 25' > "$root/free.out"
-  printf '%s\n' 'Filesystem 1024-blocks Used Available Capacity Mounted on' '/dev/test 100 80 20 80% /' > "$root/df.out"
+  printf '%s\n' '0.50 0.25 0.10 1/10 1234' >"$proc/loadavg"
+  printf '%s\n' 'Mem: 100 75 0 0 0 25' >"$root/free.out"
+  printf '%s\n' 'Filesystem 1024-blocks Used Available Capacity Mounted on' '/dev/test 100 80 20 80% /' >"$root/df.out"
 
-  cat > "$bin/nproc" <<'SCRIPT'
+  cat >"$bin/nproc" <<'SCRIPT'
 #!/usr/bin/env bash
 printf '1\n'
 SCRIPT
-  cat > "$bin/free" <<'SCRIPT'
+  cat >"$bin/free" <<'SCRIPT'
 #!/usr/bin/env bash
 cat "$MINIOPS_FIXTURE_ROOT/free.out"
 SCRIPT
-  cat > "$bin/df" <<'SCRIPT'
+  cat >"$bin/df" <<'SCRIPT'
 #!/usr/bin/env bash
 cat "$MINIOPS_FIXTURE_ROOT/df.out"
 SCRIPT
@@ -73,7 +74,7 @@ SCRIPT
 
 create_systemctl_mock() {
   local path="$1"
-  cat > "$path" <<'SCRIPT'
+  cat >"$path" <<'SCRIPT'
 #!/usr/bin/env bash
 case "${1:-}" in
   is-active)
@@ -191,7 +192,7 @@ test_missing_proc_failure() {
 test_command_failure() {
   local root="$TMP_DIR/command-failure" output status
   create_monitor_fixtures "$root"
-  cat > "$root/bin/free" <<'SCRIPT'
+  cat >"$root/bin/free" <<'SCRIPT'
 #!/usr/bin/env bash
 exit 127
 SCRIPT

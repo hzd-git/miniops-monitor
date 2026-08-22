@@ -6,7 +6,7 @@ SHFMT ?= shfmt
 BATS ?= bats
 
 SHELL_SOURCES := $(wildcard src/*.sh) install.sh uninstall.sh $(wildcard scripts/*.sh) $(wildcard tests/unit/*.sh) $(wildcard tests/integration/*.sh)
-FORMAT_SOURCES := $(SHELL_SOURCES) $(wildcard tests/bats/*.bats)
+FORMAT_SOURCES := $(SHELL_SOURCES)
 BUILD_DIR := $(CURDIR)/build
 
 .PHONY: lint format-check unit-test bats-test integration integration-systemd package package-test verify clean

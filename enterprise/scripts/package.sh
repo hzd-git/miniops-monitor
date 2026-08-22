@@ -29,7 +29,7 @@ fail() {
 }
 
 read_version() {
-  VERSION="$(tr -d '[:space:]' < "$VERSION_FILE")"
+  VERSION="$(tr -d '[:space:]' <"$VERSION_FILE")"
   [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "VERSION 必须是 X.Y.Z：$VERSION"
   detect_release_tag
   if [[ -n "$TAG" && "$TAG" != "enterprise-v${VERSION}" ]]; then
@@ -116,7 +116,7 @@ main() {
   check_archive "$package_file"
   (
     cd "$DIST_DIR"
-    sha256sum "$(basename "$package_file")" > "$(basename "$checksum_file")"
+    sha256sum "$(basename "$package_file")" >"$(basename "$checksum_file")"
     sha256sum --check "$(basename "$checksum_file")"
   )
 

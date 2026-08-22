@@ -59,7 +59,7 @@ systemctl_state() {
   fi
 
   case "$output" in
-    active|activating|deactivating|reloading|inactive|failed)
+    active | activating | deactivating | reloading | inactive | failed)
       printf '%s\n' "$output"
       return 0
       ;;
@@ -83,7 +83,7 @@ systemctl_enabled_state() {
   fi
 
   case "$output" in
-    enabled|enabled-runtime|linked|linked-runtime|alias|masked|masked-runtime|static|indirect|disabled|generated|transient|bad-setting|not-found|unknown)
+    enabled | enabled-runtime | linked | linked-runtime | alias | masked | masked-runtime | static | indirect | disabled | generated | transient | bad-setting | not-found | unknown)
       printf '%s\n' "$output"
       return 0
       ;;
@@ -96,7 +96,7 @@ systemctl_enabled_state() {
 
 is_running_state() {
   case "$1" in
-    active|activating|deactivating|reloading)
+    active | activating | deactivating | reloading)
       return 0
       ;;
     *)
@@ -107,7 +107,7 @@ is_running_state() {
 
 is_stopped_state() {
   case "$1" in
-    inactive|failed|not-found)
+    inactive | failed | not-found)
       return 0
       ;;
     *)
@@ -169,7 +169,7 @@ parse_args() {
         DRY_RUN=1
         shift
         ;;
-      --help|-h)
+      --help | -h)
         usage
         exit 0
         ;;
@@ -199,8 +199,8 @@ check_environment() {
   # shellcheck disable=SC1091
   . /etc/os-release
   case "${ID:-}:${VERSION_ID:-}" in
-    ubuntu:22.04|ubuntu:24.04)
-      ;;
+    ubuntu:22.04 | ubuntu:24.04) ;;
+
     *)
       fail "仅支持 Ubuntu 22.04/24.04。"
       ;;
@@ -236,7 +236,7 @@ prepare_transaction() {
     fail "无法查询服务启用状态，未开始安装。"
   fi
   case "$state" in
-    enabled|enabled-runtime|linked|linked-runtime|alias)
+    enabled | enabled-runtime | linked | linked-runtime | alias)
       PREVIOUS_ENABLED=1
       ;;
   esac
@@ -284,7 +284,7 @@ rollback() {
       return "$status"
     fi
     case "$state" in
-      enabled|enabled-runtime|linked|linked-runtime|alias)
+      enabled | enabled-runtime | linked | linked-runtime | alias)
         if ! systemctl_cmd disable "$SERVICE_NAME"; then
           echo "回滚前禁用服务失败，保留当前安装文件。" >&2
           report_systemd_failure
