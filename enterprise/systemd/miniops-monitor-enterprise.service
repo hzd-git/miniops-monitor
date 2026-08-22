@@ -1,0 +1,18 @@
+[Unit]
+Description=MiniOps Monitor Enterprise - local resource monitor
+After=local-fs.target
+ConditionPathExists=/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh
+
+[Service]
+Type=simple
+DynamicUser=yes
+NoNewPrivileges=yes
+ExecStart=/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh --loop --config /etc/default/miniops-monitor-enterprise
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=miniops-monitor-enterprise
+
+[Install]
+WantedBy=multi-user.target
