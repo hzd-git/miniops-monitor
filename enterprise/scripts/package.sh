@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+PROJECT_DIR="$(CDPATH="" cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION_FILE="$PROJECT_DIR/VERSION"
 BUILD_DIR="$PROJECT_DIR/build"
 STAGE_DIR="$BUILD_DIR/stage"

@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
+PROJECT_DIR="$(CDPATH="" cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)"
 SERVICE_NAME="miniops-monitor-enterprise.service"
 INSTALL_SCRIPT="$PROJECT_DIR/install.sh"
 UNINSTALL_SCRIPT="$PROJECT_DIR/uninstall.sh"

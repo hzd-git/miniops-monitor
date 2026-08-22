@@ -2,8 +2,8 @@
 
 set -uo pipefail
 
-TEST_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(CDPATH= cd -- "$TEST_DIR/../.." && pwd)"
+TEST_DIR="$(CDPATH="" cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(CDPATH="" cd -- "$TEST_DIR/../.." && pwd)"
 FAILURES=0
 
 assert_success_contains() {

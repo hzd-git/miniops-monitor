@@ -2,7 +2,7 @@
 
 set -Eeuo pipefail
 
-PROJECT_DIR="$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(CDPATH="" cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_SCRIPT="$PROJECT_DIR/src/miniops-monitor.sh"
 CONFIG_EXAMPLE="$PROJECT_DIR/config/miniops-monitor.env.example"
 SERVICE_TEMPLATE="$PROJECT_DIR/systemd/miniops-monitor-enterprise.service"
