@@ -92,7 +92,7 @@ check_archive() {
 }
 
 main() {
-  local package_root package_file checksum_file
+  local package_root package_file checksum_file archive_file
   read_version
   package_root="miniops-monitor-enterprise-${VERSION}"
   package_file="$DIST_DIR/${package_root}.tar.gz"
@@ -112,7 +112,10 @@ main() {
   done < <(cd "$STAGE_ROOT" && find tests -type f -name '*.sh' -printf 'tests/%P\n')
 
   check_manifest
-  tar -C "$STAGE_DIR" -czf "$package_file" "$package_root"
+  archive_file="${package_file%.gz}"
+  tar --sort=name --mtime='UTC 1970-01-01' --owner=0 --group=0 --numeric-owner \
+    -C "$STAGE_DIR" -cf "$archive_file" "$package_root"
+  gzip -n -f "$archive_file"
   check_archive "$package_file"
   (
     cd "$DIST_DIR"
@@ -125,3 +128,4 @@ main() {
 }
 
 main "$@"
+
