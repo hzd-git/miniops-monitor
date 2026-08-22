@@ -1,0 +1,118 @@
+name: miniops-monitor-enterprise
+
+on:
+  pull_request:
+    paths:
+      - 'enterprise/**'
+      - '.github/workflows/enterprise.yml'
+      - 'test.sh'
+      - 'install.sh'
+      - 'src/miniops-monitor.sh'
+  push:
+    branches:
+      - main
+    tags:
+      - 'enterprise-v*'
+    paths:
+      - 'enterprise/**'
+      - '.github/workflows/enterprise.yml'
+      - 'test.sh'
+      - 'install.sh'
+      - 'src/miniops-monitor.sh'
+
+permissions:
+  contents: read
+
+env:
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  verify:
+    name: verify / ubuntu-${{ matrix.version }}
+    runs-on: ubuntu-${{ matrix.version }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['22.04', '24.04']
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install development tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats make procps shellcheck shfmt
+
+      - name: Run enterprise verification
+        working-directory: enterprise
+        run: make verify
+
+      - name: Verify systemd unit syntax
+        run: |
+          staged_exec=/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh
+          cleanup() {
+            sudo rm -f -- "$staged_exec"
+            sudo rmdir --ignore-fail-on-non-empty "$(dirname -- "$staged_exec")" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          sudo install -D -m 0755 enterprise/src/miniops-monitor.sh "$staged_exec"
+          systemd-analyze verify enterprise/systemd/miniops-monitor-enterprise.service
+
+  package:
+    name: package
+    needs: verify
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/enterprise-v'))
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install packaging tools
+        run: sudo apt-get update && sudo apt-get install -y bats make procps shellcheck shfmt
+
+      - name: Verify and package
+        working-directory: enterprise
+        run: |
+          make verify
+          make package
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: miniops-monitor-enterprise-${{ github.ref_name }}
+          path: |
+            enterprise/build/dist/*.tar.gz
+            enterprise/build/dist/*.sha256
+          if-no-files-found: error
+
+  release:
+    name: release
+    needs: [verify, package]
+    if: startsWith(github.ref, 'refs/tags/enterprise-v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install release tools
+        run: sudo apt-get update && sudo apt-get install -y bats make procps shellcheck shfmt
+
+      - name: Build release files
+        working-directory: enterprise
+        run: |
+          make verify
+          make package
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            enterprise/build/dist/*.tar.gz \
+            enterprise/build/dist/*.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "MiniOps Monitor Enterprise ${{ github.ref_name }}" \
+            --notes-file enterprise/CHANGELOG.md
+
