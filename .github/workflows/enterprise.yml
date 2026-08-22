@@ -48,7 +48,15 @@ jobs:
         run: make verify
 
       - name: Verify systemd unit syntax
-        run: systemd-analyze verify enterprise/systemd/miniops-monitor-enterprise.service
+        run: |
+          staged_exec=/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh
+          cleanup() {
+            sudo rm -f -- "$staged_exec"
+            sudo rmdir --ignore-fail-on-non-empty "$(dirname -- "$staged_exec")" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          sudo install -D -m 0755 enterprise/src/miniops-monitor.sh "$staged_exec"
+          systemd-analyze verify enterprise/systemd/miniops-monitor-enterprise.service
 
   package:
     name: package
@@ -107,3 +115,4 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --title "MiniOps Monitor Enterprise ${{ github.ref_name }}" \
             --notes-file enterprise/CHANGELOG.md
+
