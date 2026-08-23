@@ -83,7 +83,29 @@ systemctl_state() {
 }
 
 systemctl_enabled_state() {
-  local output status
+  local load_state load_status output status
+
+  if load_state="$("$SYSTEMCTL_BIN" show "$SERVICE_NAME" --property=LoadState --value 2>&1)"; then
+    load_status=0
+  else
+    load_status=$?
+  fi
+
+  if ((load_status != 0)); then
+    echo "无法查询服务启用状态: show_status=$load_status show_output=${load_state:-<empty>}" >&2
+    return 1
+  fi
+  case "$load_state" in
+    not-found)
+      printf 'not-found\n'
+      return 0
+      ;;
+    "" | *[[:space:]]*)
+      echo "无法查询服务启用状态: show_output=${load_state:-<empty>}" >&2
+      return 1
+      ;;
+  esac
+
   if output="$("$SYSTEMCTL_BIN" is-enabled "$SERVICE_NAME" 2>&1)"; then
     status=0
   else
