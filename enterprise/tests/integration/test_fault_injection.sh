@@ -150,6 +150,10 @@ case "${1:-}" in
     if [[ "${FAKE_SYSTEMCTL_FAIL_DAEMON_RELOAD:-0}" == "1" ]]; then
       exit 1
     fi
+    if [[ "${FAKE_SYSTEMCTL_FAIL_DAEMON_RELOAD_ONCE:-0}" == "1" && ! -e "${FAKE_SYSTEMCTL_STATE}.daemon-reload-failed" ]]; then
+      touch "${FAKE_SYSTEMCTL_STATE}.daemon-reload-failed"
+      exit 1
+    fi
     exit 0
     ;;
   *)
@@ -381,7 +385,8 @@ test_uninstall_daemon_reload_failure() {
   local root="$TMP_DIR/uninstall-daemon-reload-failure" mock="$TMP_DIR/systemctl-uninstall-daemon-reload-failure" state="$TMP_DIR/systemctl-uninstall-daemon-reload-failure-state" output status
   create_systemctl_mock "$mock"
   create_staged_install "$root"
-  output="$(FAKE_SYSTEMCTL_FAIL_DAEMON_RELOAD=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" --purge-config 2>&1)"
+  touch "$state.active" "$state.enabled"
+  output="$(FAKE_SYSTEMCTL_FAIL_DAEMON_RELOAD_ONCE=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" --purge-config 2>&1)"
   status=$?
   if ((status == 1)); then
     pass "uninstaller daemon-reload failure returns failure"
@@ -392,6 +397,8 @@ test_uninstall_daemon_reload_failure() {
   assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "daemon-reload failure restores monitor"
   assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "daemon-reload failure restores unit"
   assert_exists "$root/etc/default/miniops-monitor-enterprise" "daemon-reload failure restores config"
+  assert_exists "$state.enabled" "daemon-reload failure restores enabled state"
+  assert_exists "$state.active" "daemon-reload failure restores active state"
 }
 
 test_monitor_success

@@ -94,7 +94,7 @@ sudo bash uninstall.sh
 sudo bash uninstall.sh --purge-config
 ```
 
-卸载过程中如果服务不存在，操作保持幂等；如果停止、禁用或 `daemon-reload` 失败，脚本会返回失败并尝试恢复原文件。先按输出的 `systemctl status` 和 `journalctl` 命令排查后再重试；如果回滚或回滚后的 `daemon-reload` 也失败，需要根据诊断信息人工恢复。
+卸载过程中如果服务不存在，操作保持幂等；如果停止、禁用或 `daemon-reload` 失败，脚本会返回失败并尝试恢复原文件和服务状态。先按输出的 `systemctl status` 和 `journalctl` 命令排查后再重试；如果回滚或回滚后的 `daemon-reload` 也失败，需要根据诊断信息人工恢复。
 
 ## 回滚
 

@@ -18,6 +18,8 @@ BACKUP_DIR=""
 BACKUP_SERVICE=0
 BACKUP_INSTALL_DIR=0
 BACKUP_CONFIG=0
+PREVIOUS_ACTIVE=0
+PREVIOUS_ENABLED=0
 
 if [[ -n "$TEST_ROOT" ]]; then
   INSTALL_DIR="$TEST_ROOT$BASE_INSTALL_DIR"
@@ -111,6 +113,17 @@ is_running_state() {
   esac
 }
 
+is_enabled_state() {
+  case "$1" in
+    enabled | enabled-runtime | linked | linked-runtime | alias)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 is_stopped_state() {
   case "$1" in
     inactive | failed | not-found)
@@ -120,6 +133,36 @@ is_stopped_state() {
       return 1
       ;;
   esac
+}
+
+restore_service_state() {
+  local status=0 state
+
+  if ((PREVIOUS_ENABLED == 1)); then
+    if ! systemctl_cmd enable "$SERVICE_NAME"; then
+      echo "恢复服务启用状态失败。" >&2
+      report_systemd_failure
+      status=1
+    elif ! state="$(systemctl_enabled_state)" || ! is_enabled_state "$state"; then
+      echo "回滚后未确认服务已恢复启用状态。" >&2
+      report_systemd_failure
+      status=1
+    fi
+  fi
+
+  if ((PREVIOUS_ACTIVE == 1)); then
+    if ! systemctl_cmd restart "$SERVICE_NAME"; then
+      echo "恢复服务运行状态失败。" >&2
+      report_systemd_failure
+      status=1
+    elif ! state="$(systemctl_state)" || ! is_running_state "$state"; then
+      echo "回滚后未确认服务已恢复运行。" >&2
+      report_systemd_failure
+      status=1
+    fi
+  fi
+
+  return "$status"
 }
 
 stop_and_verify() {
@@ -273,7 +316,12 @@ rollback_removal() {
     rollback_status=1
   fi
   if ((rollback_status == 0)); then
-    echo "卸载失败，已恢复原文件；请排查后重试。" >&2
+    if ! restore_service_state; then
+      rollback_status=1
+    fi
+  fi
+  if ((rollback_status == 0)); then
+    echo "卸载失败，已恢复原文件和服务状态；请排查后重试。" >&2
   else
     echo "卸载失败，回滚未完全成功；请根据上述命令人工恢复。" >&2
   fi
@@ -334,21 +382,43 @@ main() {
   fi
   [[ "$INSTALL_DIR" == "$TEST_ROOT$BASE_INSTALL_DIR" ]] || fail "安装目录保护检查失败。"
 
-  local state
+  local state enabled_state
   if ! state="$(systemctl_state)"; then
     fail "无法查询服务状态，未删除任何文件。"
   fi
+  if ! enabled_state="$(systemctl_enabled_state)"; then
+    report_systemd_failure
+    fail "无法查询服务启用状态，未删除任何文件。"
+  fi
+  if is_running_state "$state"; then
+    PREVIOUS_ACTIVE=1
+  fi
+  if is_enabled_state "$enabled_state"; then
+    PREVIOUS_ENABLED=1
+  fi
   if ! is_stopped_state "$state" && ! stop_and_verify; then
+    if ! restore_service_state; then
+      fail "服务未能确认停止，且恢复原服务状态失败。"
+    fi
     fail "服务未能确认停止，未删除任何文件。"
   fi
   if ! disable_and_verify; then
+    if ! restore_service_state; then
+      fail "服务未能确认禁用，且恢复原服务状态失败。"
+    fi
     fail "服务未能确认禁用，未删除任何文件。"
   fi
   if ! state="$(systemctl_state)" || ! is_stopped_state "$state"; then
     report_systemd_failure
+    if ! restore_service_state; then
+      fail "删除前再次确认服务状态失败，且恢复原服务状态失败。"
+    fi
     fail "删除前再次确认服务状态失败，未删除任何文件。"
   fi
   if ! prepare_removal_backup; then
+    if ! restore_service_state; then
+      fail "无法建立卸载回滚点，且恢复原服务状态失败。"
+    fi
     fail "无法建立卸载回滚点，未删除任何文件。"
   fi
   if ! remove_installed_files; then
