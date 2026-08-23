@@ -377,6 +377,23 @@ test_uninstall_query_failure() {
   assert_exists "$root/etc/default/miniops-monitor-enterprise" "query failure preserves config"
 }
 
+test_uninstall_daemon_reload_failure() {
+  local root="$TMP_DIR/uninstall-daemon-reload-failure" mock="$TMP_DIR/systemctl-uninstall-daemon-reload-failure" state="$TMP_DIR/systemctl-uninstall-daemon-reload-failure-state" output status
+  create_systemctl_mock "$mock"
+  create_staged_install "$root"
+  output="$(FAKE_SYSTEMCTL_FAIL_DAEMON_RELOAD=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" --purge-config 2>&1)"
+  status=$?
+  if ((status == 1)); then
+    pass "uninstaller daemon-reload failure returns failure"
+  else
+    fail "uninstaller daemon-reload failure returns failure: status=$status output=$output"
+  fi
+  assert_contains "$output" "daemon-reload" "uninstaller daemon-reload failure diagnosis"
+  assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "daemon-reload failure restores monitor"
+  assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "daemon-reload failure restores unit"
+  assert_exists "$root/etc/default/miniops-monitor-enterprise" "daemon-reload failure restores config"
+}
+
 test_monitor_success
 test_missing_proc_failure
 test_command_failure
@@ -390,6 +407,7 @@ test_uninstall_service_absent
 test_uninstall_stop_failure
 test_uninstall_disable_failure
 test_uninstall_query_failure
+test_uninstall_daemon_reload_failure
 
 if ((FAILURES == 0)); then
   echo "PASS: fault injection checks completed."

@@ -14,6 +14,10 @@ TEST_ROOT="${MINIOPS_TEST_ROOT:-}"
 SYSTEMCTL_BIN="${MINIOPS_SYSTEMCTL:-systemctl}"
 DRY_RUN=0
 PURGE_CONFIG=0
+BACKUP_DIR=""
+BACKUP_SERVICE=0
+BACKUP_INSTALL_DIR=0
+BACKUP_CONFIG=0
 
 if [[ -n "$TEST_ROOT" ]]; then
   INSTALL_DIR="$TEST_ROOT$BASE_INSTALL_DIR"
@@ -34,6 +38,13 @@ fail() {
   echo "卸载失败: $*" >&2
   exit 1
 }
+
+cleanup() {
+  if [[ -n "$BACKUP_DIR" ]]; then
+    rm -rf -- "$BACKUP_DIR" 2>/dev/null || true
+  fi
+}
+trap cleanup EXIT
 
 systemctl_cmd() {
   "$SYSTEMCTL_BIN" "$@"
@@ -179,6 +190,104 @@ disable_and_verify() {
   esac
 }
 
+prepare_removal_backup() {
+  BACKUP_DIR="$(mktemp -d /tmp/miniops-monitor-enterprise-uninstall.XXXXXX)" || {
+    echo "无法创建卸载回滚目录，未删除任何文件。" >&2
+    return 1
+  }
+
+  if [[ -e "$SERVICE_FILE" ]]; then
+    if ! cp -a -- "$SERVICE_FILE" "$BACKUP_DIR/service"; then
+      echo "无法备份 unit，未删除任何文件。" >&2
+      return 1
+    fi
+    BACKUP_SERVICE=1
+  fi
+  if [[ -e "$INSTALL_DIR" ]]; then
+    if ! cp -a -- "$INSTALL_DIR" "$BACKUP_DIR/install_dir"; then
+      echo "无法备份安装目录，未删除任何文件。" >&2
+      return 1
+    fi
+    BACKUP_INSTALL_DIR=1
+  fi
+  if ((PURGE_CONFIG == 1)) && [[ -e "$CONFIG_FILE" ]]; then
+    if ! cp -a -- "$CONFIG_FILE" "$BACKUP_DIR/config"; then
+      echo "无法备份配置文件，未删除任何文件。" >&2
+      return 1
+    fi
+    BACKUP_CONFIG=1
+  fi
+}
+
+restore_removal_backup() {
+  local status=0
+
+  if ((BACKUP_SERVICE == 1)); then
+    if ! rm -f -- "$SERVICE_FILE" || ! cp -a -- "$BACKUP_DIR/service" "$SERVICE_FILE"; then
+      echo "恢复 unit 失败。" >&2
+      status=1
+    fi
+  else
+    if ! rm -f -- "$SERVICE_FILE"; then
+      echo "清理新增 unit 失败。" >&2
+      status=1
+    fi
+  fi
+
+  if ((BACKUP_INSTALL_DIR == 1)); then
+    if ! rm -rf -- "$INSTALL_DIR" || ! cp -a -- "$BACKUP_DIR/install_dir" "$INSTALL_DIR"; then
+      echo "恢复安装目录失败。" >&2
+      status=1
+    fi
+  else
+    if ! rm -rf -- "$INSTALL_DIR"; then
+      echo "清理新增安装目录失败。" >&2
+      status=1
+    fi
+  fi
+
+  if ((PURGE_CONFIG == 1)); then
+    if ((BACKUP_CONFIG == 1)); then
+      if ! rm -f -- "$CONFIG_FILE" || ! cp -a -- "$BACKUP_DIR/config" "$CONFIG_FILE"; then
+        echo "恢复配置文件失败。" >&2
+        status=1
+      fi
+    elif ! rm -f -- "$CONFIG_FILE"; then
+      echo "清理新增配置文件失败。" >&2
+      status=1
+    fi
+  fi
+
+  return "$status"
+}
+
+rollback_removal() {
+  local rollback_status=0
+
+  if ! restore_removal_backup; then
+    rollback_status=1
+  fi
+  if ! systemctl_cmd daemon-reload; then
+    echo "回滚后的 daemon-reload 失败。" >&2
+    report_systemd_failure
+    rollback_status=1
+  fi
+  if ((rollback_status == 0)); then
+    echo "卸载失败，已恢复原文件；请排查后重试。" >&2
+  else
+    echo "卸载失败，回滚未完全成功；请根据上述命令人工恢复。" >&2
+  fi
+  return "$rollback_status"
+}
+
+remove_installed_files() {
+  rm -f -- "$SERVICE_FILE" || return 1
+  rm -rf -- "$INSTALL_DIR" || return 1
+  if ((PURGE_CONFIG == 1)); then
+    rm -f -- "$CONFIG_FILE" || return 1
+  fi
+}
+
 parse_args() {
   while (($# > 0)); do
     case "$1" in
@@ -239,20 +348,23 @@ main() {
     report_systemd_failure
     fail "删除前再次确认服务状态失败，未删除任何文件。"
   fi
-  if ! rm -f -- "$SERVICE_FILE"; then
-    fail "删除 unit 失败，保留其余文件以便人工恢复。"
+  if ! prepare_removal_backup; then
+    fail "无法建立卸载回滚点，未删除任何文件。"
   fi
-  if ! rm -rf -- "$INSTALL_DIR"; then
-    fail "删除安装目录失败，请根据当前状态人工恢复。"
-  fi
-  if ((PURGE_CONFIG == 1)); then
-    if ! rm -f -- "$CONFIG_FILE"; then
-      fail "删除配置失败，请根据当前状态人工恢复。"
+  if ! remove_installed_files; then
+    echo "删除卸载文件失败，开始恢复原文件..." >&2
+    if rollback_removal; then
+      :
     fi
+    fail "文件删除失败，已尝试恢复；请查看当前状态后重试。"
   fi
   if ! systemctl_cmd daemon-reload; then
     report_systemd_failure
-    fail "文件已删除，但 daemon-reload 失败；请手动执行 daemon-reload。"
+    echo "daemon-reload 失败，开始恢复原文件..." >&2
+    if rollback_removal; then
+      :
+    fi
+    fail "daemon-reload 失败，已尝试恢复；请查看当前状态后重试。"
   fi
   echo "卸载完成：服务、unit 和安装目录已清理。"
 }
