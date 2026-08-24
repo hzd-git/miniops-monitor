@@ -459,7 +459,7 @@ sudo journalctl -u miniops-monitor-enterprise.service -n 100 --no-pager -o cat
 **Status:** 🚫 SUPERSEDED
 
 - 本地 `main=2cc7b73...` 是过期远程引用；
-- 当前权威 main 为 `51663c9...`。
+- 当前 main 应在新会话启动时动态核对，并确认已包含 HANDOFF；`51663c9...` 仅是 HANDOFF 的稳定源文档基线。
 
 ## 14. Pitfalls Already Encountered
 
@@ -501,7 +501,7 @@ reset、checkout、pull 或 clean 可能覆盖用户修改。
 
 **Correct procedure**
 
-使用远程 `main=51663c9...` 或明确绑定的 `enterprise-v0.1.1`。
+使用启动时动态核对的远程 `main`，或明确绑定的 `enterprise-v0.1.1`。
 
 ### ❌ DO NOT: 关闭 SSL 校验解决 clone 失败
 
