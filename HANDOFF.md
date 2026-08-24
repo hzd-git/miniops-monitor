@@ -51,7 +51,7 @@ Stage 6 — Final project handoff
 
 | Item | Value | Status |
 | --- | --- | --- |
-| Remote main | `51663c9abcb097ba602bc0737d8544b93de4e49c` | ✅ VERIFIED |
+| Remote main | `492b252e13af8928e5818a6271f6684b851a1cb3` | ✅ VERIFIED |
 | Release commit | `7c40469590a66113f8d2f81481da9040e9359411` | ✅ VERIFIED |
 | Release tag | `enterprise-v0.1.1` | ✅ VERIFIED |
 | Release tar SHA256 | `80b2a0899110e790e182ab7b27dc311966a5934176c7c548e42bf412bd0fcc7f` | ✅ VERIFIED |
@@ -269,7 +269,7 @@ None for the released v0.1.1 project.
 
 **Objective**
 
-以远程最终 `main=51663c9...` 和 `enterprise-v0.1.1` 为学习主线。
+以远程最终 `main=492b252e...` 和 `enterprise-v0.1.1` 为学习主线。
 
 **Action**
 
@@ -321,7 +321,7 @@ None for the released v0.1.1 project.
 > Begin from the current verified state below.
 
 1. 阅读本 `HANDOFF.md`；
-2. 确认远程 `main=51663c9...`；
+2. 确认远程 `main=492b252e...`；
 3. 确认当前版本为 `0.1.1`；
 4. 检查工作区是否包含既有 staged 文件；
 5. 使用 Enterprise 文档和最终 Release 作为学习基线；
@@ -458,7 +458,7 @@ sudo journalctl -u miniops-monitor-enterprise.service -n 100 --no-pager -o cat
 **Status:** 🚫 SUPERSEDED
 
 - 本地 `main=2cc7b73...` 是过期远程引用；
-- 当前权威 main 为 `51663c9...`。
+- 当前权威 main 为 `492b252e...`。
 
 ## 14. Pitfalls Already Encountered
 
@@ -500,7 +500,7 @@ reset、checkout、pull 或 clean 可能覆盖用户修改。
 
 **Correct procedure**
 
-使用远程 `main=51663c9...` 或明确绑定的 `enterprise-v0.1.1`。
+使用远程 `main=492b252e...` 或明确绑定的 `enterprise-v0.1.1`。
 
 ### ❌ DO NOT: 关闭 SSL 校验解决 clone 失败
 
@@ -548,7 +548,7 @@ reset、checkout、pull 或 clean 可能覆盖用户修改。
 
 **How to verify**
 
-新会话在无 staged 变更的 clean checkout 中确认 `main=51663c9...`。
+新会话在无 staged 变更的 clean checkout 中确认 `main=492b252e...`。
 
 **Does it block next step?**
 
@@ -557,9 +557,9 @@ No。学习和后续文档工作使用最终远程 main。
 ## 18. Current Critical Path
 
 ```text
-远程 main=51663c9...（已验证）
+远程 main=492b252e...（已验证）
         ↓
-HANDOFF.md 进入最终 main（当前交接任务）
+HANDOFF.md 已进入最终 main（✅ VERIFIED）
         ↓
 新会话阅读 HANDOFF 并确认 clean baseline
         ↓
@@ -570,7 +570,8 @@ HANDOFF.md 进入最终 main（当前交接任务）
 
 ## 19. Evidence Links
 
-- [最终 main commit](https://github.com/hzd-git/miniops-monitor/commit/51663c9abcb097ba602bc0737d8544b93de4e49c)
+- [最终 main commit（含 HANDOFF）](https://github.com/hzd-git/miniops-monitor/commit/492b252e13af8928e5818a6271f6684b851a1cb3)
+- [HANDOFF docs-only PR #9](https://github.com/hzd-git/miniops-monitor/pull/9)
 - [Release commit](https://github.com/hzd-git/miniops-monitor/commit/7c40469590a66113f8d2f81481da9040e9359411)
 - [P1 修复 PR #5](https://github.com/hzd-git/miniops-monitor/pull/5)
 - [文档 PR #7](https://github.com/hzd-git/miniops-monitor/pull/7)
