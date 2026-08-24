@@ -18,6 +18,22 @@ systemd
           └─ journald → journalctl
 ```
 
+## 工程闭环
+
+```text
+行为契约
+   ↓
+Bash 实现与单元/Bats/故障注入测试
+   ↓
+GitHub Actions（Ubuntu 22.04/24.04）
+   ↓
+确定性打包与 SHA256 artifact
+   ↓
+enterprise-v0.1.1 Release
+   ↓
+Ubuntu 22.04/24.04 systemd 实机 smoke
+```
+
 ## 边界
 
 - Bash 负责本机采集、配置、阈值和日志。
@@ -25,6 +41,12 @@ systemd
 - 安装器负责依赖检查、文件部署、unit 注册和失败回滚。
 - 测试通过 `MINIOPS_PROC_ROOT`、fake 命令和临时安装根目录隔离宿主机状态。
 - CI 负责静态检查、行为测试、故障注入和发布包验证。
+
+配置的生效路径为：默认值 → `/etc/default/miniops-monitor-enterprise` → CLI 参数。日志通过 stdout 交给 journald，稳定字段为 `timestamp`、`schema_version`、`level` 和 `event`。
+
+## 技术边界
+
+当前选择 Bash + systemd 是有意的：项目重点是 Linux 服务生命周期、权限、配置、日志和可恢复发布，而不是构建通用监控平台。Prometheus、多机调度、容器、数据库和复杂告警状态机均不在当前边界内，相关想法进入 backlog 后再按真实复杂度评估。
 
 ## 错误路径
 
