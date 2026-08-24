@@ -77,6 +77,22 @@ create_systemctl_mock() {
   cat >"$path" <<'SCRIPT'
 #!/usr/bin/env bash
 case "${1:-}" in
+  show)
+    if [[ "${FAKE_SYSTEMCTL_FAIL_SHOW:-0}" == "1" || "${FAKE_SYSTEMCTL_FAIL_QUERY:-0}" == "1" ]]; then
+      printf 'Failed to connect to bus: mock failure\n'
+      exit 1
+    fi
+    if [[ "${FAKE_SYSTEMCTL_NOT_FOUND:-0}" == "1" || "${FAKE_SYSTEMCTL_SHOW_NOT_FOUND:-0}" == "1" || "${FAKE_SYSTEMCTL_LEGACY_NOT_FOUND:-0}" == "1" ]]; then
+      printf 'not-found\n'
+      exit 0
+    fi
+    if [[ "${FAKE_SYSTEMCTL_UNIT_EXISTS:-0}" == "1" || -e "${MINIOPS_TEST_ROOT:-}/etc/systemd/system/miniops-monitor-enterprise.service" || -e "${FAKE_SYSTEMCTL_STATE}.active" || -e "${FAKE_SYSTEMCTL_STATE}.enabled" ]]; then
+      printf 'loaded\n'
+    else
+      printf 'not-found\n'
+    fi
+    exit 0
+    ;;
   is-active)
     if [[ "${FAKE_SYSTEMCTL_FAIL_QUERY:-0}" == "1" ]]; then
       printf 'Failed to connect to bus: mock failure\n'
@@ -105,6 +121,12 @@ case "${1:-}" in
     if [[ "${FAKE_SYSTEMCTL_NOT_FOUND:-0}" == "1" ]]; then
       state=not-found
       status=1
+    elif [[ "${FAKE_SYSTEMCTL_LEGACY_NOT_FOUND:-0}" == "1" ]]; then
+      printf 'Failed to get unit file state for miniops-monitor-enterprise.service:\nNo such file or directory\n'
+      exit 1
+    elif [[ "${FAKE_SYSTEMCTL_FAIL_ENABLED_QUERY:-0}" == "1" ]]; then
+      printf 'Failed to connect to bus: mock enabled query failure\n'
+      exit 1
     elif [[ -e "${FAKE_SYSTEMCTL_STATE}.enabled" ]]; then
       state=enabled
       status=0
@@ -227,6 +249,66 @@ test_install_success() {
   assert_exists "$root/etc/default/miniops-monitor-enterprise" "staged config installed"
 }
 
+test_install_systemd_249_missing_unit() {
+  local root="$TMP_DIR/install-systemd-249-missing" mock="$TMP_DIR/systemctl-systemd-249-missing" state="$TMP_DIR/systemctl-systemd-249-missing-state" output status
+  create_systemctl_mock "$mock"
+  output="$(FAKE_SYSTEMCTL_SHOW_NOT_FOUND=1 FAKE_SYSTEMCTL_LEGACY_NOT_FOUND=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$INSTALL_SCRIPT" 2>&1)"
+  status=$?
+  if ((status == 0)); then
+    pass "systemd 249 missing unit allows first install"
+  else
+    fail "systemd 249 missing unit allows first install: status=$status output=$output"
+  fi
+  assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "systemd 249 install creates monitor"
+  assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "systemd 249 install creates unit"
+}
+
+test_install_systemd_255_missing_unit() {
+  local root="$TMP_DIR/install-systemd-255-missing" mock="$TMP_DIR/systemctl-systemd-255-missing" state="$TMP_DIR/systemctl-systemd-255-missing-state" output status
+  create_systemctl_mock "$mock"
+  output="$(FAKE_SYSTEMCTL_SHOW_NOT_FOUND=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$INSTALL_SCRIPT" 2>&1)"
+  status=$?
+  if ((status == 0)); then
+    pass "systemd 255 missing unit allows first install"
+  else
+    fail "systemd 255 missing unit allows first install: status=$status output=$output"
+  fi
+  assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "systemd 255 install creates monitor"
+  assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "systemd 255 install creates unit"
+}
+
+test_install_show_failure_preserves() {
+  local root="$TMP_DIR/install-show-failure" mock="$TMP_DIR/systemctl-show-failure" state="$TMP_DIR/systemctl-show-failure-state" output status
+  create_systemctl_mock "$mock"
+  output="$(FAKE_SYSTEMCTL_FAIL_SHOW=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$INSTALL_SCRIPT" 2>&1)"
+  status=$?
+  if ((status == 1)); then
+    pass "installer show failure returns failure"
+  else
+    fail "installer show failure returns failure: status=$status output=$output"
+  fi
+  assert_contains "$output" "show_status=" "installer show failure diagnosis"
+  assert_not_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "show failure leaves monitor absent"
+  assert_not_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "show failure leaves unit absent"
+}
+
+test_install_enabled_query_failure_preserves() {
+  local root="$TMP_DIR/install-enabled-query-failure" mock="$TMP_DIR/systemctl-enabled-query-failure" state="$TMP_DIR/systemctl-enabled-query-failure-state" output status
+  create_systemctl_mock "$mock"
+  create_staged_install "$root"
+  output="$(FAKE_SYSTEMCTL_FAIL_ENABLED_QUERY=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$INSTALL_SCRIPT" 2>&1)"
+  status=$?
+  if ((status == 1)); then
+    pass "installer enabled query failure returns failure"
+  else
+    fail "installer enabled query failure returns failure: status=$status output=$output"
+  fi
+  assert_contains "$output" "无法查询服务启用状态" "installer enabled query failure diagnosis"
+  assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "enabled query failure preserves monitor"
+  assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "enabled query failure preserves unit"
+  assert_exists "$root/etc/default/miniops-monitor-enterprise" "enabled query failure preserves config"
+}
+
 test_install_failure_cleanup() {
   local root="$TMP_DIR/install-failure" mock="$TMP_DIR/systemctl-failure" state="$TMP_DIR/systemctl-failure-state" output status
   create_systemctl_mock "$mock"
@@ -331,6 +413,66 @@ test_uninstall_service_absent() {
   fi
 }
 
+test_uninstall_service_absent_systemd_249() {
+  local root="${TMP_DIR}/uninstall-absent-systemd-249" mock="${TMP_DIR}/systemctl-uninstall-absent-systemd-249" state="${TMP_DIR}/systemctl-uninstall-absent-systemd-249-state" output status
+  create_systemctl_mock "$mock"
+  output="$(FAKE_SYSTEMCTL_SHOW_NOT_FOUND=1 FAKE_SYSTEMCTL_LEGACY_NOT_FOUND=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" 2>&1)"
+  status=$?
+  if ((status == 0)); then
+    pass "systemd 249 absent service uninstall is idempotent"
+  else
+    fail "systemd 249 absent service uninstall is idempotent: status=$status output=$output"
+  fi
+}
+
+test_uninstall_disabled_service() {
+  local root="${TMP_DIR}/uninstall-disabled" mock="${TMP_DIR}/systemctl-uninstall-disabled" state="${TMP_DIR}/systemctl-uninstall-disabled-state" output status
+  create_systemctl_mock "$mock"
+  create_staged_install "$root"
+  output="$(MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" 2>&1)"
+  status=$?
+  if ((status == 0)); then
+    pass "disabled service uninstall succeeds"
+  else
+    fail "disabled service uninstall succeeds: status=$status output=$output"
+  fi
+  assert_not_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "disabled uninstall removes monitor"
+  assert_not_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "disabled uninstall removes unit"
+  assert_exists "$root/etc/default/miniops-monitor-enterprise" "disabled uninstall retains config"
+}
+
+test_uninstall_show_failure_preserves() {
+  local root="${TMP_DIR}/uninstall-show-failure" mock="${TMP_DIR}/systemctl-uninstall-show-failure" state="${TMP_DIR}/systemctl-uninstall-show-failure-state" output status
+  create_systemctl_mock "$mock"
+  create_staged_install "$root"
+  output="$(FAKE_SYSTEMCTL_FAIL_SHOW=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" --purge-config 2>&1)"
+  status=$?
+  if ((status == 1)); then
+    pass "uninstaller show failure returns failure"
+  else
+    fail "uninstaller show failure returns failure: status=$status output=$output"
+  fi
+  assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "show failure preserves monitor"
+  assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "show failure preserves unit"
+  assert_exists "$root/etc/default/miniops-monitor-enterprise" "show failure preserves config"
+}
+
+test_uninstall_enabled_query_failure() {
+  local root="${TMP_DIR}/uninstall-enabled-query-failure" mock="${TMP_DIR}/systemctl-uninstall-enabled-query-failure" state="${TMP_DIR}/systemctl-uninstall-enabled-query-failure-state" output status
+  create_systemctl_mock "$mock"
+  create_staged_install "$root"
+  output="$(FAKE_SYSTEMCTL_FAIL_ENABLED_QUERY=1 MINIOPS_TEST_MODE=1 MINIOPS_TEST_ROOT="$root" MINIOPS_SYSTEMCTL="$mock" FAKE_SYSTEMCTL_STATE="$state" bash "$PROJECT_DIR/uninstall.sh" --purge-config 2>&1)"
+  status=$?
+  if ((status == 1)); then
+    pass "uninstaller enabled query failure returns failure"
+  else
+    fail "uninstaller enabled query failure returns failure: status=$status output=$output"
+  fi
+  assert_exists "$root/usr/local/lib/miniops-monitor-enterprise/miniops-monitor.sh" "enabled query failure preserves monitor"
+  assert_exists "$root/etc/systemd/system/miniops-monitor-enterprise.service" "enabled query failure preserves unit"
+  assert_exists "$root/etc/default/miniops-monitor-enterprise" "enabled query failure preserves config"
+}
+
 test_uninstall_stop_failure() {
   local root="$TMP_DIR/uninstall-stop-failure" mock="$TMP_DIR/systemctl-uninstall-stop-failure" state="$TMP_DIR/systemctl-uninstall-stop-failure-state" output status
   create_systemctl_mock "$mock"
@@ -405,12 +547,20 @@ test_monitor_success
 test_missing_proc_failure
 test_command_failure
 test_install_success
+test_install_systemd_249_missing_unit
+test_install_systemd_255_missing_unit
+test_install_show_failure_preserves
+test_install_enabled_query_failure_preserves
 test_install_failure_cleanup
 test_install_failure_stop_preserves
 test_install_failure_disable_preserves
 test_install_failure_daemon_reload_preserves
 test_uninstall_success
 test_uninstall_service_absent
+test_uninstall_service_absent_systemd_249
+test_uninstall_disabled_service
+test_uninstall_show_failure_preserves
+test_uninstall_enabled_query_failure
 test_uninstall_stop_failure
 test_uninstall_disable_failure
 test_uninstall_query_failure
