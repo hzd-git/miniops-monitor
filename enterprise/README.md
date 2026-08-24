@@ -6,7 +6,11 @@
 
 ## 当前状态
 
-阶段 0 至阶段 5 的实现已完成，当前进入外部验收：GitHub Actions 首次运行和 Ubuntu/systemd 实机验证仍需专用环境。
+阶段 0 至阶段 5 的实现、GitHub Actions 验证、v0.1.1 发布和 Ubuntu 22.04/24.04 systemd 实机 smoke 均已完成。
+
+当前正式版本：`enterprise-v0.1.1`。
+
+本项目已完成从需求、行为契约、实现、测试、CI、打包、Release 到 Linux 实机验收的可追溯闭环。它是一个面向工程能力展示的小型单机服务，不宣称已经具备多机监控平台、告警编排或容器化生产平台能力。
 
 ## 文档入口
 
@@ -17,7 +21,9 @@
 - [发布流程](docs/release.md)
 - [架构说明](docs/architecture.md)
 - [运维手册](docs/operations.md)
-- [最终展示材料](docs/showcase/final-report.md)
+- [最终项目总结](docs/showcase/final-summary.md)
+- [工程能力复盘](docs/showcase/engineering-retrospective.md)
+- [完整展示报告](docs/showcase/final-report.md)
 - [Backlog](docs/backlog.md)
 - [阶段进度](docs/progress.md)
 

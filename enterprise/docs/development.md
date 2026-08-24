@@ -23,7 +23,13 @@ make verify
 make clean
 ```
 
-`make clean` 只删除企业版 `build/` 目录。Linux/systemd 集成测试将在阶段 3 增加，不应在普通开发机上伪装成已通过的测试。
+`make clean` 只删除企业版 `build/` 目录。Linux/systemd 集成测试需要真实 Linux 和 systemd 环境；在普通开发机上不要伪装成已通过。具备授权的 disposable 主机可以执行：
+
+```bash
+sudo MINIOPS_ALLOW_SYSTEMD_TEST=1 make integration-systemd
+```
+
+该命令是补充证据，不能替代完整的人工生命周期、journal 和残留检查。
 
 ## 修改纪律
 

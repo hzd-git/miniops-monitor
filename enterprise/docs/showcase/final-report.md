@@ -1,25 +1,20 @@
-# MiniOps Monitor Enterprise 工程能力总结
+# MiniOps Monitor Enterprise 最终工程报告
 
-## 已形成的能力
+项目已完成 v0.1.1 的企业化改造、CI/CD、发布和真实 Ubuntu systemd 验收。
 
-- 基线分析和行为契约冻结。
-- Bash 配置、错误处理和退出码设计。
-- 单元测试、Bats、fixture 和故障注入。
-- 安装器 dry-run、事务回滚和卸载流程。
-- Makefile、静态检查和清理边界。
-- CI 矩阵、版本一致性和发布 artifact。
-- systemd 最小权限边界和渐进式安全决策。
-- 运维排障、回滚和最终展示材料。
+## 最终状态
 
-## 当前与生产标准的差距
+- 正式版本：`enterprise-v0.1.1`。
+- `RELEASE_COMMIT`：`7c40469590a66113f8d2f81481da9040e9359411`。
+- Ubuntu 22.04 Release smoke：PASS。
+- Ubuntu 24.04 Release smoke：PASS。
+- P0/P1：无。
 
-- 真实 Ubuntu systemd 测试尚未在专用环境完成。
-- GitHub Actions 尚未完成首次远程运行确认。
-- 复杂 systemd 安全限制和告警恢复状态机暂缓。
+## 展示入口
 
-## 下一步
+- [最终项目总结](final-summary.md)：项目背景、技术演进、证据链和最终边界。
+- [工程能力复盘](engineering-retrospective.md)：能力沉淀、技术取舍和面试展示角度。
+- [CI 与发布记录](ci-record.md)
+- [测试与实机验收结果](test-results.md)
 
-1. 在专用 Ubuntu 主机运行 `make verify` 和 `make integration-systemd`。
-2. 修复 CI 或 systemd 集成发现的问题。
-3. 保留首次 CI 记录和故障演练日志。
-4. 评审是否将 `0.1.0` 标记为可发布版本。
+该报告只总结已完成事实；未执行的后续能力均保留在 backlog，不作为当前版本能力宣称。
